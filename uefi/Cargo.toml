@@ -1,0 +1,14 @@
+[package]
+name = "duke-efi"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "duke"
+path = "src/main.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+jvm = { path = "../jvm" }
+uefi = { version = "0.36.1", features = ["alloc", "global_allocator", "logger", "panic_handler"] }
+log = "0.4.29"

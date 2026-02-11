@@ -1,0 +1,11 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["deflate"]
+deflate = ["miniz_oxide"]
+
+[dependencies]
+miniz_oxide = { version = "0.9.0", default-features = false, features = ["with-alloc"], optional = true }

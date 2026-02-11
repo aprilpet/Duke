@@ -1,0 +1,17 @@
+# Rust
+/target
+
+# Java
+*.class
+*.jar
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store

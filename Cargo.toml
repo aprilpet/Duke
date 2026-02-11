@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "shared",
+    "uefi",
+    "jvm", 
+]
+resolver = "2"
