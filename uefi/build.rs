@@ -32,7 +32,7 @@ struct BdfGlyph {
     bbx_h: i32,
     bbx_xoff: i32,
     bbx_yoff: i32,
-    bitmap: Vec<u8>,
+    bitmap: Vec<u16>,
 }
 
 struct BdfFont {
@@ -69,7 +69,7 @@ fn parse_bdf(content: &str) -> BdfFont {
             let mut bxo: i32 = 0;
             let mut byo: i32 = 0;
             let mut glyph_dw: Option<i32> = None;
-            let mut bitmap_rows: Vec<u8> = Vec::new();
+            let mut bitmap_rows: Vec<u16> = Vec::new();
             let mut in_bitmap = false;
 
             for gline in lines.by_ref() {
@@ -101,12 +101,14 @@ fn parse_bdf(content: &str) -> BdfFont {
                 } else if gline == "BITMAP" {
                     in_bitmap = true;
                 } else if in_bitmap {
-                    let byte = if gline.len() >= 2 {
-                        u8::from_str_radix(&gline[..2], 16).unwrap_or(0)
+                    let val = if gline.len() >= 4 {
+                        u16::from_str_radix(&gline[..4], 16).unwrap_or(0)
+                    } else if gline.len() >= 2 {
+                        (u16::from_str_radix(&gline[..2], 16).unwrap_or(0)) << 8
                     } else {
                         0
                     };
-                    bitmap_rows.push(byte);
+                    bitmap_rows.push(val);
                 }
             }
 
@@ -149,26 +151,26 @@ fn generate_from_bdf(content: &str, dest: &PathBuf) {
 
     let map: HashMap<u32, &BdfGlyph> = font.glyphs.iter().map(|g| (g.encoding, g)).collect();
 
-    let mut cells: Vec<Vec<u8>> = Vec::new();
+    let mut cells: Vec<Vec<u16>> = Vec::new();
 
     for ch in 0x20u32..=0x7Eu32 {
-        let mut cell = vec![0u8; cell_h];
+        let mut cell = vec![0u16; cell_h];
 
         if let Some(g) = map.get(&ch) {
             let top_row = font.font_ascent - g.bbx_yoff - g.bbx_h;
 
-            for (i, &byte) in g.bitmap.iter().enumerate() {
+            for (i, &val) in g.bitmap.iter().enumerate() {
                 let r = top_row + i as i32;
                 if r < 0 || r >= cell_h as i32 {
                     continue;
                 }
 
                 let shifted = if g.bbx_xoff > 0 {
-                    byte >> g.bbx_xoff
+                    val >> g.bbx_xoff
                 } else if g.bbx_xoff < 0 {
-                    byte << (-g.bbx_xoff)
+                    val << (-g.bbx_xoff)
                 } else {
-                    byte
+                    val
                 };
                 cell[r as usize] |= shifted;
             }
@@ -184,7 +186,7 @@ fn generate_from_bdf(content: &str, dest: &PathBuf) {
     writeln!(f, "pub const GLYPH_W: usize = {};", cell_w).unwrap();
     writeln!(f, "pub const GLYPH_H: usize = {};", cell_h).unwrap();
     writeln!(f).unwrap();
-    writeln!(f, "pub(super) static FONT_DATA: [[u8; {}]; 95] = [", cell_h).unwrap();
+    writeln!(f, "pub(super) static FONT_DATA: [[u16; {}]; 95] = [", cell_h).unwrap();
 
     for (i, cell) in cells.iter().enumerate() {
         let ch = (0x20 + i) as u8 as char;
@@ -200,19 +202,19 @@ fn generate_from_bdf(content: &str, dest: &PathBuf) {
             if j > 0 {
                 write!(f, ", ").unwrap();
             }
-            write!(f, "0x{:02X}", b).unwrap();
+            write!(f, "0x{:04X}", b).unwrap();
         }
         writeln!(f, "],").unwrap();
     }
 
     writeln!(f, "];").unwrap();
     writeln!(f).unwrap();
-    write!(f, "pub(super) static FALLBACK: [u8; {}] = [", cell_h).unwrap();
+    write!(f, "pub(super) static FALLBACK: [u16; {}] = [", cell_h).unwrap();
     for i in 0..cell_h {
         if i > 0 {
             write!(f, ", ").unwrap();
         }
-        write!(f, "0xFF").unwrap();
+        write!(f, "0xFFFF").unwrap();
     }
     writeln!(f, "];").unwrap();
 }

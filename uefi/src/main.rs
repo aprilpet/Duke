@@ -652,9 +652,9 @@ fn draw_text_gop(
     for (ci, ch) in text.bytes().enumerate() {
         let gly = font::glyph(ch);
         for row in 0..font::GLYPH_H {
-            let byte = gly[row];
+            let bits = gly[row];
             for col in 0..font::GLYPH_W {
-                if byte & (0x80 >> col) != 0 {
+                if bits & (0x8000 >> col) != 0 {
                     for sy in 0..scale {
                         for sx in 0..scale {
                             let px = ci * char_w + col * scale + sx;
